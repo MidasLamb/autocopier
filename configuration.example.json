@@ -1,0 +1,22 @@
+{
+    "aliases": [],
+    "from_aliases": [
+        {
+            "name": "project-name",
+            "replacement": "autocopier"
+        }
+    ],
+    "to_aliases": [
+        {
+            "name": "project-name",
+            "replacement": "autocopier"
+        }
+    ],
+    "files": [
+        {
+            "from": "C:\\Users\\Midas\\Desktop\\Projects\\@project-name\\configuration.json",
+            "through": "C:\\Users\\Midas\\Desktop\\Projects\\@project-name\\configuration_copy_middle.json",
+            "to": "C:\\Users\\Midas\\Desktop\\Projects\\autocopier\\configuration_copy.json"
+        }
+    ]
+}
