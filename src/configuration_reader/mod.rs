@@ -42,11 +42,11 @@ pub struct JsonAliases {
 }
 
 fn simplify(to_simplify: &str) -> String {
-    let mut s = to_simplify.clone();
-    while (to_simplify.contains("\\\\")) {
-        to_simplify.replace("\\\\", "\\");
+    let mut s = String::from(to_simplify.clone());
+    while (s.contains("\\\\")) {
+        s = s.replace("\\\\", "\\");
     }
-    String::from(to_simplify)
+    s
 }
 
 fn parse_configuration_from_string(
