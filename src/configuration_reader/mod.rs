@@ -41,6 +41,14 @@ pub struct JsonAliases {
     replacement: String,
 }
 
+fn simplify(to_simplify: &str) -> String {
+    let mut s = to_simplify.clone();
+    while (to_simplify.contains("\\\\")) {
+        to_simplify.replace("\\\\", "\\");
+    }
+    String::from(to_simplify)
+}
+
 fn parse_configuration_from_string(
     json_string: &str,
     step_in_chain: StepInChain,
@@ -101,6 +109,10 @@ fn parse_configuration_from_string(
                 to = f.to.to_owned();
             }
         }
+
+        from = simplify(&from);
+        to = simplify(&to);
+
         alias_map.iter().for_each(|am| {
             let alias: &str = &("@".to_owned() + am.0);
             println!("alias: {:?}", alias);
@@ -245,5 +257,13 @@ mod tests {
             PathBuf::from(".\\tocopier\\configuration_copy.json"),
             configuration.files.get(0).unwrap().to
         );
+    }
+
+    #[test]
+    fn test_simplify() {
+        let start_string = "Test\\\\\\Extra\\\\More\\";
+        let result = simplify(start_string);
+        let expected = "Test\\Extra\\More\\";
+        assert_eq!(expected, &result);
     }
 }
