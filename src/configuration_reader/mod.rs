@@ -145,9 +145,7 @@ fn parse_configuration_from_string(
 
         alias_map.iter().for_each(|am| {
             let alias: &str = &("@".to_owned() + am.0);
-            println!("alias: {:?}", alias);
             let replacement: &str = am.1;
-            println!("replacement: {:?}", alias);
             from = from.replace(alias, replacement);
             to = to.replace(alias, replacement);
         });

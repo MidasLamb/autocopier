@@ -96,6 +96,12 @@ fn main() -> Result<(), std::io::Error> {
                 .long("use_polling")
                 .help("Use polling instead of using the OS events."),
         )
+        .arg(
+            Arg::with_name("print_watched")
+                .short("w")
+                .long("print_watched")
+                .help("Print the files that will be watched and exit."),
+        )
         .get_matches();
 
     let configuration_file = matches
@@ -114,6 +120,7 @@ fn main() -> Result<(), std::io::Error> {
     };
 
     let use_polling: bool = matches.is_present("use_polling");
+    let print_watched: bool = matches.is_present("print_watched");
 
     // Parse configuration
     let (mut configuration, unparsed) = match parse_configuration(configuration_file, step_in_chain)
@@ -127,6 +134,13 @@ fn main() -> Result<(), std::io::Error> {
             return Err(e);
         }
     };
+
+    if print_watched {
+        for fd in configuration.files {
+            println!("{:?} \r\n\tto {:?}", fd.from, fd.to);
+        }
+        return Ok(());
+    }
 
     // Set up channel for termination.
     let (tx, rx): (Sender<()>, Receiver<()>) = mpsc::channel();
