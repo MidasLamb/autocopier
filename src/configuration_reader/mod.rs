@@ -49,6 +49,36 @@ fn simplify(to_simplify: &str) -> String {
     s
 }
 
+fn contains_multiple(potential_multiple: &str) -> bool {
+    potential_multiple.contains("{") && potential_multiple.contains("}")
+}
+
+fn extract_multiple(multiples: &str) -> Vec<String> {
+    if !contains_multiple(multiples) {
+        return vec![String::from(multiples)];
+    }
+
+    // we can safely unwrap because contains multiple checks the presence of these.
+    let start_index = multiples.find('{').unwrap();
+    let end_index = multiples.find('}').unwrap();
+
+    // We will want to reuse this part and concatenate to it.
+    let first_part = &multiples[0..start_index];
+    let last_part = &multiples[end_index + 1..];
+
+    let substr = &multiples[start_index + 1..end_index];
+
+    let mut result_vector: Vec<String> = Vec::new();
+
+    for mult_split in substr.split(",") {
+        for last_part_m in extract_multiple(last_part) {
+            result_vector.push(String::from(first_part) + mult_split + &last_part_m);
+        }
+    }
+
+    result_vector
+}
+
 fn parse_configuration_from_string(
     json_string: &str,
     step_in_chain: StepInChain,
@@ -121,10 +151,24 @@ fn parse_configuration_from_string(
             from = from.replace(alias, replacement);
             to = to.replace(alias, replacement);
         });
-        configuration.files.push(FileDescription {
-            from: PathBuf::from(from),
-            to: PathBuf::from(to),
-        });
+        // Check if multiple subsets are in there
+
+        if (contains_multiple(&from)) {
+            let multiple_from = extract_multiple(&from);
+            let multiple_to = extract_multiple(&to);
+
+            for (f, t) in multiple_from.iter().zip(multiple_to.iter()) {
+                configuration.files.push(FileDescription {
+                    from: PathBuf::from(f),
+                    to: PathBuf::from(t),
+                });
+            }
+        } else {
+            configuration.files.push(FileDescription {
+                from: PathBuf::from(from),
+                to: PathBuf::from(to),
+            });
+        }
     });
 
     Ok((configuration, failed_vec))
@@ -260,10 +304,82 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple() {
+        let parse_result = parse_configuration_from_string(
+            r#"{
+                "files": [
+                    {
+                        "from": "\\test\\executable.{exe,pdb}",
+                        "through": "\\othertest\\executable.{exe,pdb}",
+                        "to": "\\moreothertest\\executable.{exe,pdb}"
+                    }
+                ]
+            }"#,
+            StepInChain::Start,
+        );
+        assert!(parse_result.is_ok());
+        let (configuration, unparsed) = parse_result.unwrap();
+        assert_eq!(configuration.files.len(), 2);
+        assert_eq!(
+            PathBuf::from("\\test\\executable.exe"),
+            configuration.files.get(0).unwrap().from
+        );
+        assert_eq!(
+            PathBuf::from("\\othertest\\executable.exe"),
+            configuration.files.get(0).unwrap().to
+        );
+        assert_eq!(
+            PathBuf::from("\\test\\executable.pdb"),
+            configuration.files.get(1).unwrap().from
+        );
+        assert_eq!(
+            PathBuf::from("\\othertest\\executable.pdb"),
+            configuration.files.get(1).unwrap().to
+        );
+    }
+
+    #[test]
     fn test_simplify() {
         let start_string = "Test\\\\\\Extra\\\\More\\";
         let result = simplify(start_string);
         let expected = "Test\\Extra\\More\\";
         assert_eq!(expected, &result);
+    }
+
+    #[test]
+    fn test_contains_multiple() {
+        let multiple_str = "Th{is, at}";
+        assert!(contains_multiple(multiple_str));
+
+        let non_multiple_str = "This";
+        assert!(!contains_multiple(non_multiple_str));
+    }
+
+    #[test]
+    fn test_extract_multiples_single() {
+        let multiple_str = "Th{is,at}";
+        let result = extract_multiple(multiple_str);
+
+        let this = String::from("This");
+        let that = String::from("That");
+
+        assert!(result.contains(&this));
+        assert!(result.contains(&that));
+    }
+
+    #[test]
+    fn test_extract_multiples_multiple() {
+        let multiple_str = "Th{is,at} and th{at,is}";
+        let result = extract_multiple(multiple_str);
+
+        let this_and_this = String::from("This and this");
+        let this_and_that = String::from("This and that");
+        let that_and_that = String::from("That and that");
+        let that_and_this = String::from("That and this");
+
+        assert!(result.contains(&this_and_that));
+        assert!(result.contains(&this_and_this));
+        assert!(result.contains(&that_and_that));
+        assert!(result.contains(&that_and_this));
     }
 }
