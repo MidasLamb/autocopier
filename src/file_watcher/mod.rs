@@ -77,28 +77,6 @@ impl FileWatcher {
         }
     }
 
-    fn get_watcher(
-        tx: Sender<DebouncedEvent>,
-        use_polling: bool,
-    ) -> Result<MyWatcher, notify::Error> {
-        match use_polling {
-            true => match PollWatcher::new(tx, Duration::from_millis(100)) {
-                Ok(v) => Ok(MyWatcher::Pw(v)),
-                Err(e) => {
-                    println!("{:?}", e);
-                    Err(e)
-                }
-            },
-            false => match watcher(tx, Duration::from_millis(100)) {
-                Ok(v) => Ok(MyWatcher::Rdcw(v)),
-                Err(e) => {
-                    println!("{:?}", e);
-                    Err(e)
-                }
-            },
-        }
-    }
-
     pub fn start(mut self) -> FileWatcher {
         let mut file_descriptions_map_clone: HashMap<PathBuf, FileDescription> = HashMap::new();
         for fd in self.file_descriptions_map.values() {
@@ -132,7 +110,7 @@ impl FileWatcher {
             // Automatically select the best implementation for your platform.
             // You can also access each implementation directly e.g. INotifyWatcher.
 
-            let mut watch = match FileWatcher::get_watcher(tx, use_polling) {
+            let mut watch = match MyWatcher::get_watcher(tx, use_polling) {
                 Ok(v) => v,
                 Err(e) => {
                     return;
