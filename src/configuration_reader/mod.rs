@@ -140,9 +140,6 @@ fn parse_configuration_from_string(
             }
         }
 
-        from = simplify(&from);
-        to = simplify(&to);
-
         alias_map.iter().for_each(|am| {
             let alias: &str = &("@".to_owned() + am.0);
             let replacement: &str = am.1;
@@ -157,14 +154,14 @@ fn parse_configuration_from_string(
 
             for (f, t) in multiple_from.iter().zip(multiple_to.iter()) {
                 configuration.files.push(FileDescription {
-                    from: PathBuf::from(f),
-                    to: PathBuf::from(t),
+                    from: PathBuf::from(simplify(f)),
+                    to: PathBuf::from(simplify(t)),
                 });
             }
         } else {
             configuration.files.push(FileDescription {
-                from: PathBuf::from(from),
-                to: PathBuf::from(to),
+                from: PathBuf::from(simplify(&from)),
+                to: PathBuf::from(simplify(&to)),
             });
         }
     });
@@ -342,6 +339,59 @@ mod tests {
         let result = simplify(start_string);
         let expected = "Test\\Extra\\More\\";
         assert_eq!(expected, &result);
+    }
+
+    #[test]
+    fn test_simply_configuration() {
+        let parse_result = parse_configuration_from_string(
+            r#"{
+                "aliases": [
+                    {
+                        "name": "shared",
+                        "replacement": "\\FpShare\\autocopier\\Files\\"
+                    },
+                    {
+                        "name": "exedotnet",
+                        "replacement": "C:\\exedotnet\\"
+                    }
+                ],
+                "from_aliases": [
+                    {
+                        "name": "drive",
+                        "replacement": "C:"
+                    },
+                    {
+                        "name": "workspace",
+                        "replacement": "C:\\workspaces\\GroupFuelPos\\git-FuelPos_53.90.9999999_stable\\"
+                    },
+                    {
+                        "name": "DatabaseServer",
+                        "replacement": "\\Common\\DatabaseServer\\Server\\bin\\Debug\\Framework\\"
+                    }
+                ],
+                "to_aliases": [
+                    {
+                        "name": "drive",
+                        "replacement": "Z:"
+                    }
+                ],
+                "files": [
+                    {
+                        "from": "@workspace\\@DatabaseServer\\DatabaseServer.{exe,pdb}",
+                        "through": "@drive\\@shared\\DatabaseServer\\DatabaseServer.{exe,pdb}",
+                        "to": "@exedotnet\\DatabaseServer\\DatabaseServer.{exe,pdb}"
+                    }
+                ]
+            }"#,
+            StepInChain::Start,
+        );
+        assert!(parse_result.is_ok());
+        let (configuration, unparsed) = parse_result.unwrap();
+        assert_eq!(configuration.files.len(), 2);
+        assert_eq!(
+            "C:\\workspaces\\GroupFuelPos\\git-FuelPos_53.90.9999999_stable\\Common\\DatabaseServer\\Server\\bin\\Debug\\Framework\\DatabaseServer.exe",
+            configuration.files.get(0).unwrap().from.to_string_lossy()
+        );
     }
 
     #[test]
