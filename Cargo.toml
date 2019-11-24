@@ -1,6 +1,6 @@
 [package]
 name = "autocopier"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Midas Lambrichts <midaslamb@gmail.com>"]
 edition = "2018"
 description = "Watches files for changes and, on file change, copies it according to some configuration."
